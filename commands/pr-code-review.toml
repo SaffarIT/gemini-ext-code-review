@@ -34,23 +34,21 @@ Un-prefixed names like `pull_request_read` or `create_pending_pull_request_revie
 
 2. **Add Comments and Suggestions:** For each formulated review comment, call `mcp_github_add_comment_to_pending_review` (read its input schema first for the exact parameter names — path/line/side/subject). Use the LEFT/RIGHT `side` to keep line accuracy. 
 
-    2a. For each suggested change, structure the comment payload using this exact template:
+    2a. For each suggested change, the comment `body` is exactly (no wrapper tags, no extra prose):
 
-        <COMMENT>
         [{{SEVERITY}}] {{COMMENT_TEXT}}
 
         ```suggestion
         {{CODE_SUGGESTION}}
         ```
-        </COMMENT>
 
-    2b. When there is no code suggestion, structure the comment payload using this exact template:
+    2b. When there is no code suggestion, the comment `body` is exactly:
 
-        <COMMENT>
         [{{SEVERITY}}] {{COMMENT_TEXT}}
-        </COMMENT>
 
-3. **Submit Final Review:** Call `mcp_github_pull_request_review_write` with `method: "submit_pending"`, the summary comment as `body`, and `event: "COMMENT"`. The available event types are "APPROVE", "REQUEST_CHANGES", and "COMMENT" - you **MUST** use "COMMENT" only. **DO NOT** use "APPROVE" or "REQUEST_CHANGES" event types. The summary comment **MUST** use this exact markdown format:
+    2c. **Never include XML-like delimiter tags** (such as `<COMMENT>`, `</COMMENT>`, `<SUMMARY>`, `</SUMMARY>`, `<CONTEXT>`) in any text you post to GitHub. Those tags structure this prompt only; posted text must contain nothing but the templates above.
+
+3. **Submit Final Review:** Call `mcp_github_pull_request_review_write` with `method: "submit_pending"`, the summary comment as `body`, and `event: "COMMENT"`. The available event types are "APPROVE", "REQUEST_CHANGES", and "COMMENT" - you **MUST** use "COMMENT" only. **DO NOT** use "APPROVE" or "REQUEST_CHANGES" event types. The summary comment **MUST** use this exact markdown format and start directly with the first heading:
 
     ## 📋 Review Summary
 
@@ -60,6 +58,5 @@ Un-prefixed names like `pull_request_read` or `create_pending_pull_request_revie
 
     - A bulleted list of general observations, positive highlights, or recurring patterns not suitable for inline comments.
     - Keep this section concise and do not repeat details already covered in inline comments.
-    </SUMMARY>
 </SUBMIT_REVIEW>
 """
