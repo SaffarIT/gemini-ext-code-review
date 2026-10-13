@@ -4,13 +4,22 @@ prompt = """
     **GitHub Repository**: $REPOSITORY
     **Pull Request Number**: $PULL_REQUEST_NUMBER
     **Additional User Instructions**: $ADDITIONAL_CONTEXT
-    **Pull Review Details**: use `pull_request_read.get` tool to get the title, body, and metadata about the pull request.
-    **Code Changes**: call the `pull_request_read.get_diff` tool to retrieve the changes.
+    **Pull Review Details**: use the `mcp_github_pull_request_read` tool with `method: "get"` to get the title, body, and metadata about the pull request.
+    **Code Changes**: call the `mcp_github_pull_request_read` tool with `method: "get_diff"` to retrieve the changes.
 </CONTEXT>
 
 <PROTOCOL>
 Activate the `code-review-commons` skill for persona, objective, instructions and critical constraints. Then submit review following the exact structure and rules in the `<SUBMIT_REVIEW>` section.
 </PROTOCOL>
+
+<INTEGRATION_NOTE>
+The GitHub MCP server exposes tools under these EXACT registered names (verified against gemini-cli 0.60.0 + github-mcp-server v0.27.0):
+- `mcp_github_pull_request_read` (with a `method` argument: "get", "get_diff", "get_status", "get_files", "get_review_comments", "get_reviews", "get_comments")
+- `mcp_github_pull_request_review_write` (with a `method` argument: "create", "submit_pending", "delete_pending")
+- `mcp_github_add_comment_to_pending_review` (separate top-level tool: adds one comment to the user's latest pending review)
+
+Un-prefixed names like `pull_request_read` or `create_pending_pull_request_review` DO NOT exist in this environment — calling them fails with "Tool not found". Always use the exact `mcp_github_*` names above and read each tool's input schema for its parameter names before calling. If a tool call fails with "not found", list the available tools and retry with the registered name instead of giving up.
+</INTEGRATION_NOTE>
 
 <SUBMIT_REVIEW>
 **Review Comment Formatting**
@@ -21,9 +30,9 @@ Activate the `code-review-commons` skill for persona, objective, instructions an
 
     - Comments on the after (RIGHT) diff **MUST** use the line numbers and corresponding code from the RIGHT diff.
 
-1. **Create Pending Review:** Call `create_pending_pull_request_review`. Ignore errors like "can only have one pending review per pull request" and proceed to the next step.
+1. **Create Pending Review:** Call `mcp_github_pull_request_review_write` with `method: "create"` and **NO** `event` parameter (omitting `event` creates a pending review instead of submitting it). Ignore errors like "can only have one pending review per pull request" and proceed to the next step.
 
-2. **Add Comments and Suggestions:** For each formulated review comment, call `add_comment_to_pending_review`. 
+2. **Add Comments and Suggestions:** For each formulated review comment, call `mcp_github_add_comment_to_pending_review` (read its input schema first for the exact parameter names — path/line/side/subject). Use the LEFT/RIGHT `side` to keep line accuracy. 
 
     2a. For each suggested change, structure the comment payload using this exact template:
 
@@ -41,7 +50,7 @@ Activate the `code-review-commons` skill for persona, objective, instructions an
         [{{SEVERITY}}] {{COMMENT_TEXT}}
         </COMMENT>
 
-3. **Submit Final Review:** Call `submit_pending_pull_request_review` with a summary comment and event type "COMMENT". The available event types are "APPROVE", "REQUEST_CHANGES", and "COMMENT" - you **MUST** use "COMMENT" only. **DO NOT** use "APPROVE" or "REQUEST_CHANGES" event types. The summary comment **MUST** use this exact markdown format:
+3. **Submit Final Review:** Call `mcp_github_pull_request_review_write` with `method: "submit_pending"`, the summary comment as `body`, and `event: "COMMENT"`. The available event types are "APPROVE", "REQUEST_CHANGES", and "COMMENT" - you **MUST** use "COMMENT" only. **DO NOT** use "APPROVE" or "REQUEST_CHANGES" event types. The summary comment **MUST** use this exact markdown format:
 
     ## 📋 Review Summary
 
